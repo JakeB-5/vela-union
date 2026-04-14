@@ -16,6 +16,9 @@
 
 **다른 PC에서 AI 에이전트가 이 가이드를 따라 Vela Union을 자동 설치하는 경로.**
 
+<details>
+<summary>설치 단계 펼치기</summary>
+
 ### Prerequisites (설치 전 확인)
 
 ```bash
@@ -143,6 +146,8 @@ claude mcp list | grep vela-union      # Connected
 | Plugin 404 on install | Check `http://127.0.0.1:3100/api/plugins` — reinstall via `curl -X POST .../api/plugins/install` |
 
 **Issue reports:** https://github.com/JakeB-5/vela-union/issues
+
+</details>
 
 ---
 

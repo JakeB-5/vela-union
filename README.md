@@ -16,6 +16,9 @@ Vela Union unifies five open-source systems (Paperclip, gstack, Graphify, PageIn
 
 **The path an AI agent on another machine should follow to install Vela Union automatically.**
 
+<details>
+<summary>Click to expand installation steps</summary>
+
 ### Prerequisites
 
 ```bash
@@ -143,6 +146,8 @@ claude mcp list | grep vela-union      # Connected
 | Plugin 404 on install | Check `http://127.0.0.1:3100/api/plugins` — reinstall via `curl -X POST .../api/plugins/install` |
 
 **Issue reports:** https://github.com/JakeB-5/vela-union/issues
+
+</details>
 
 ---
 
