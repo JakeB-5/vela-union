@@ -15,6 +15,8 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { listProjects } from "@vela-union/shared";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -323,6 +325,7 @@ export interface ReconcileResult {
 /**
  * Walk every project in ~/.vela/graphify/, copy any graph.html into the plugin
  * dist/ui/graphs/ directory, remove stale HTML, and rewrite manifest.json.
+ * Only projects present in the Vela registry (~/.vela/projects.json) are included.
  */
 export function reconcileGraphViz(): ReconcileResult {
   const result: ReconcileResult = { copied: [], removed: [], manifestEntries: [] };
@@ -330,9 +333,11 @@ export function reconcileGraphViz(): ReconcileResult {
   mkdirSync(PLUGIN_GRAPHS_DIR, { recursive: true });
   if (!existsSync(GRAPHIFY_ROOT)) return result;
 
+  const registeredNames = new Set(listProjects().map((p) => p.name));
   const sourceProjects = new Set<string>();
 
   for (const name of readdirSync(GRAPHIFY_ROOT)) {
+    if (!registeredNames.has(name)) continue;
     const htmlPath = join(GRAPHIFY_ROOT, name, "graph.html");
     if (existsSync(htmlPath)) {
       sourceProjects.add(name);
