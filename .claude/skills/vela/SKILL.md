@@ -1,66 +1,66 @@
 ---
 name: vela
-description: "Vela Union 크로스 프로젝트 오케스트레이션 스킬. 프로젝트 포트폴리오 상태 확인, 크로스 프로젝트 지식 검색(gbrain), 다른 프로젝트로 목표 위임, 프로젝트 컨텍스트 로드에 사용합니다. 'vela', 'portfolio', 'cross-project', 'dispatch goal', '다른 프로젝트', '지식 검색', '프로젝트 상태', '목표 위임', '프로젝트 등록' 키워드가 포함된 요청에서 이 스킬을 사용하세요. 현재 프로젝트가 아닌 다른 프로젝트의 정보가 필요하거나, 여러 프로젝트에 걸친 작업을 조율해야 할 때도 반드시 이 스킬을 사용하세요."
+description: "Vela Union cross-project orchestration skill. Use this to check portfolio status, run cross-project knowledge search (gbrain), delegate goals to other projects, and load project context from anywhere. Trigger on keywords like 'vela', 'portfolio', 'cross-project', 'dispatch goal', 'other project', 'knowledge search', 'project status', 'goal delegation', 'register project' — and their Korean equivalents: '다른 프로젝트', '지식 검색', '프로젝트 상태', '목표 위임', '프로젝트 등록'. Use this whenever you need information about a project other than the current one, or when you need to coordinate work spanning multiple projects."
 ---
 
 # Vela Union — Cross-Project Orchestration Skill
 
-Vela Union은 5개 시스템(Paperclip, gstack, Graphify, PageIndex, gbrain)을 통합하는 에이전트 오케스트레이션 플랫폼입니다. 이 스킬을 통해 **어떤 프로젝트에서든** Vela의 크로스 프로젝트 기능에 접근할 수 있습니다.
+Vela Union unifies five systems (Paperclip, gstack, Graphify, PageIndex, gbrain) into one agent orchestration layer. This skill exposes Vela's cross-project capabilities from **any** project you're working in.
 
-> 이 스킬 사용 중 문제가 발생하면 https://github.com/JakeB-5/vela-union/issues 에 이슈를 등록해주세요.
+> If you hit a problem while using this skill, please open an issue at https://github.com/JakeB-5/vela-union/issues.
 
 ---
 
 ## Prerequisites
 
-이 스킬이 작동하려면 다음이 필요합니다:
+This skill depends on:
 
-1. **Paperclip 서버** — `http://127.0.0.1:3100` 에서 실행 중
-2. **gbrain CLI** — `bun add -g github:JakeB-5/gbrain` 로 설치
-3. **Ollama + bge-m3** — 의미 검색용 (없으면 키워드 검색으로 fallback)
+1. **Paperclip server** — running at `http://127.0.0.1:3100`
+2. **gbrain CLI** — install with `bun add -g github:JakeB-5/gbrain`
+3. **Ollama + bge-m3** — for semantic search (falls back to keyword search if missing)
 
-실행 전 health check:
+Health check before running anything:
 ```bash
-# Paperclip 서버 확인
+# Paperclip server
 curl -sf http://127.0.0.1:3100/api/health | head -1
 
-# gbrain 확인
+# gbrain
 which gbrain && gbrain stats
 ```
 
-서버가 응답하지 않으면: "Paperclip 서버가 127.0.0.1:3100에서 실행되고 있지 않습니다." 를 출력하고 중단하세요.
-gbrain이 없으면: "gbrain이 설치되지 않았습니다. 설치: `bun add -g github:JakeB-5/gbrain`" 를 출력하세요.
+If the server does not respond: output "Paperclip server is not running at 127.0.0.1:3100." and stop.
+If gbrain is missing: output "gbrain is not installed. Install: `bun add -g github:JakeB-5/gbrain`".
 
 ---
 
 ## Configuration
 
-Vela Union 인스턴스 식별자 (모든 API 호출에 사용):
+Vela Union instance identifiers (used for every API call):
 
 ```
 PAPERCLIP_URL=http://127.0.0.1:3100
 COMPANY_ID=bddcbe42-1913-485b-88ae-54a7b0866f59
-CTO_AGENT_ID=e27888b7-67ae-443f-922d-c0706ead330e
+CTO_AGENT_ID=c779c5e3-e2b8-4583-ad7d-a858f9ba767e
 ```
 
-프로젝트 레지스트리: `~/.vela/projects.json`
+Project registry: `~/.vela/projects.json`
 
 ---
 
 ## Commands
 
-### 1. `/vela status` — 포트폴리오 상태 확인
+### 1. `/vela status` — portfolio overview
 
-모든 등록 프로젝트와 활성 이슈를 한눈에 보여줍니다.
+Shows every registered project and every active issue at a glance.
 
-**실행 순서:**
+**Steps:**
 
-1. 등록 프로젝트 목록 조회:
+1. List registered projects:
 ```bash
 cat ~/.vela/projects.json
 ```
 
-2. 전체 활성 이슈 조회 (Paperclip API):
+2. List all active issues (Paperclip API):
 ```bash
 curl -s "http://127.0.0.1:3100/api/companies/bddcbe42-1913-485b-88ae-54a7b0866f59/issues" \
   | python3 -c "
@@ -68,16 +68,16 @@ import sys, json
 issues = json.load(sys.stdin)
 active = [i for i in issues if i['status'] in ('todo','in_progress','blocked')]
 for i in active:
-    assignee = 'CTO' if i.get('assigneeAgentId') == 'e27888b7-67ae-443f-922d-c0706ead330e' else (i.get('assigneeAgentId') or 'none')
+    assignee = 'CTO' if i.get('assigneeAgentId') == 'c779c5e3-e2b8-4583-ad7d-a858f9ba767e' else (i.get('assigneeAgentId') or 'none')
     print(f'{i.get(\"identifier\",\"?\")} [{i[\"status\"]}] [{assignee}] {i[\"title\"][:60]}')
 print(f'---')
 print(f'Total active: {len(active)} / {len(issues)} issues')
 "
 ```
 
-3. 에이전트 상태 조회:
+3. Agent status:
 ```bash
-curl -s "http://127.0.0.1:3100/api/agents/e27888b7-67ae-443f-922d-c0706ead330e" \
+curl -s "http://127.0.0.1:3100/api/agents/c779c5e3-e2b8-4583-ad7d-a858f9ba767e" \
   | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
@@ -85,58 +85,58 @@ print(f'CTO: {d[\"status\"]} | last heartbeat: {d.get(\"lastHeartbeatAt\",\"neve
 "
 ```
 
-**출력 형식:** 프로젝트 목록 + 활성 이슈 + 에이전트 상태를 테이블로 정리하여 보여줍니다.
+**Output format:** a table combining project list + active issues + agent status.
 
 ---
 
-### 2. `/vela search <query>` — 크로스 프로젝트 지식 검색
+### 2. `/vela search <query>` — cross-project knowledge search
 
-gbrain의 하이브리드 의미 검색(벡터+키워드+RRF)을 사용하여 모든 프로젝트의 지식을 횡단 검색합니다. 한국어와 영어 모두 지원합니다.
+Runs gbrain's hybrid semantic search (vector + keyword + RRF) across every project. Mixed Korean/English queries are supported.
 
-**실행:**
+**Run:**
 ```bash
 gbrain query "<query>" --no-expand
 ```
 
-`--no-expand`는 Anthropic API 없이도 검색이 작동하도록 쿼리 확장을 건너뜁니다.
+`--no-expand` skips query expansion so the search works without an Anthropic API key.
 
-**출력 형식:** 상위 결과를 slug, 점수, 발췌문과 함께 보여줍니다.
+**Output format:** top hits with slug, score, and excerpt.
 
-**예시:**
+**Example:**
 ```
-User: /vela search 캐시 성능 개선 전략
+User: /vela search cache performance improvement strategy
 
-결과:
+Result:
 [0.9996] archive/completed-2026-02/cache_improvement_plan
-  "각 미적용 모듈을 다음 기준으로 평가합니다: Read/Write 비율..."
+  "Evaluate each un-applied module by the following criteria: Read/Write ratio..."
 [0.6637] archive/completed-2026-02/embedding_sdk_plan
   "app.min.js, app.esm.js..."
 ```
 
-**특정 페이지의 상세 내용이 필요하면:**
+**If you need the full content of a specific page:**
 ```bash
 gbrain get <slug>
 ```
 
 ---
 
-### 3. `/vela context` — 현재 프로젝트 컨텍스트 로드
+### 3. `/vela context` — load context for the current project
 
-현재 작업 디렉토리의 프로젝트에 대한 모든 Vela 컨텍스트(구조, 문서, 기억)를 한 번에 로드합니다.
+Loads every piece of Vela context (structure, docs, memory) for the project in the current working directory, in one shot.
 
-**실행 순서:**
+**Steps:**
 
-1. 프로젝트 이름 감지 (cwd의 디렉토리명 또는 `~/.vela/projects.json`에서 매칭):
+1. Detect the project name (via cwd directory name, or match against `~/.vela/projects.json`):
 ```bash
 basename $(pwd)
 ```
 
-2. gbrain 기억 로드:
+2. Load gbrain memory:
 ```bash
 gbrain query "<project-name>" --no-expand
 ```
 
-3. Graphify 구조 로드 (존재하는 경우):
+3. Load Graphify structure (if present):
 ```bash
 cat ~/.vela/graphify/<project-name>/graph.json 2>/dev/null | python3 -c "
 import sys, json
@@ -157,7 +157,7 @@ except:
 "
 ```
 
-4. PageIndex 상태 로드 (존재하는 경우):
+4. Load PageIndex state (if present):
 ```bash
 cat ~/.vela/pageindex/<project-name>/index.json 2>/dev/null | python3 -c "
 import sys, json
@@ -170,17 +170,17 @@ except:
 "
 ```
 
-**출력 형식:** 기억(gbrain), 구조(Graphify), 문서(PageIndex) 세 섹션으로 나누어 보여줍니다.
+**Output format:** three sections — memory (gbrain), structure (Graphify), documents (PageIndex).
 
 ---
 
-### 4. `/vela dispatch <project> <goal>` — 목표 위임
+### 4. `/vela dispatch <project> <goal>` — delegate a goal
 
-다른 프로젝트에 이슈를 생성하고 CTO 에이전트에게 할당합니다. wakeOnAssignment에 의해 CTO가 자동으로 작업을 시작합니다.
+Creates an issue in another project and assigns it to the CTO agent. `wakeOnAssignment` causes the CTO to start working automatically.
 
-**실행 순서:**
+**Steps:**
 
-1. 대상 프로젝트의 Paperclip project ID 조회:
+1. Resolve the target project's Paperclip project ID:
 ```bash
 curl -s "http://127.0.0.1:3100/api/companies/bddcbe42-1913-485b-88ae-54a7b0866f59/projects" \
   | python3 -c "
@@ -197,47 +197,47 @@ else:
 "
 ```
 
-프로젝트를 찾지 못하면: 등록된 Paperclip 프로젝트 목록을 보여주고 올바른 이름을 확인하도록 안내합니다.
+If the project cannot be resolved: show the registered Paperclip project list and ask for the correct name.
 
-2. 이슈 생성 + CTO 할당:
+2. Create the issue and assign it to CTO:
 ```bash
 curl -s -X POST "http://127.0.0.1:3100/api/companies/bddcbe42-1913-485b-88ae-54a7b0866f59/issues" \
   -H "Content-Type: application/json" \
   -d '{
     "projectId": "<resolved-project-id>",
-    "title": "<goal 제목 (50자 이내로 요약)>",
-    "description": "<goal 전체 설명 — 컨텍스트, 스코프, 참조 파일 포함>",
+    "title": "<goal title — summarize in under 50 chars>",
+    "description": "<full goal description — context, scope, referenced files>",
     "status": "todo",
     "priority": "medium",
-    "assigneeAgentId": "e27888b7-67ae-443f-922d-c0706ead330e"
+    "assigneeAgentId": "c779c5e3-e2b8-4583-ad7d-a858f9ba767e"
   }'
 ```
 
-3. 결과 확인:
+3. Confirm:
 ```bash
-# 응답에서 identifier 추출 (예: VELA-40, SDD-1)
+# Extract the identifier from the response (e.g. VELA-40, SDD-1)
 echo "Issue created: <identifier> — assigned to CTO, will auto-wake"
 ```
 
-**description 작성 가이드:**
-- 무엇을 해야 하는지 명확하게
-- 어떤 파일을 봐야 하는지
-- 완료 기준 (checklist)
-- 관련 참조 문서나 이전 이슈 링크
+**Description guidelines:**
+- State exactly what needs to be done
+- Point to the files to read
+- Provide a completion checklist
+- Link related reference docs or prior issues
 
 ---
 
-### 5. `/vela register` — 현재 프로젝트 등록
+### 5. `/vela register` — register the current project
 
-현재 작업 디렉토리를 Vela Union 레지스트리에 등록합니다. 한 번만 실행하면 됩니다.
+Adds the current working directory to the Vela Union registry. Run once per project.
 
-**실행:**
+**Run:**
 ```bash
-# 현재 디렉토리 정보
+# Current directory info
 PROJECT_NAME=$(basename $(pwd))
 PROJECT_PATH=$(pwd)
 
-# ~/.vela/projects.json에 추가
+# Append to ~/.vela/projects.json
 python3 -c "
 import json, os
 registry_path = os.path.expanduser('~/.vela/projects.json')
@@ -261,7 +261,7 @@ with open(registry_path, 'w') as f:
 "
 ```
 
-등록 후 확인:
+Verify:
 ```bash
 cat ~/.vela/projects.json | python3 -c "
 import sys, json
@@ -274,47 +274,47 @@ for p in json.load(sys.stdin):
 
 ## Workflow Examples
 
-### 다른 프로젝트의 지식을 참조하며 작업하기
+### Reuse knowledge from another project
 ```
-User: 다른 프로젝트에서 했던 캐시 개선 전략을 이 프로젝트에도 적용하고 싶어
+User: I want to apply the cache improvement strategy from another project here
 
 Agent:
-1. /vela search 캐시 성능 개선 전략
-2. 관련 문서 확인: gbrain get archive/completed-2026-02/cache_improvement_plan
-3. 현재 프로젝트에 맞게 적용
+1. /vela search cache performance improvement strategy
+2. Inspect the match: gbrain get archive/completed-2026-02/cache_improvement_plan
+3. Adapt it to the current project
 ```
 
-### 버그를 다른 프로젝트 담당자에게 위임하기
+### Delegate a bug to the owner of another project
 ```
-User: vela-union의 MCP gateway에서 search 결과가 빈 배열로 나오는 버그가 있어
+User: vela-union's MCP gateway returns an empty array from search — file it
 
 Agent:
 1. /vela dispatch vela-union "Fix: knowledge.search returns empty array for Korean queries"
-2. 이슈에 재현 방법, 로그, 예상 원인 상세 기술
+2. Include reproduction steps, logs, and a suspected cause in the description
 ```
 
-### 새 프로젝트를 Vela에 연결하기
+### Onboard a new project to Vela
 ```
-User: 이 프로젝트를 Vela에 등록해줘
+User: Register this project with Vela
 
 Agent:
 1. /vela register
-2. /vela context (등록 후 바로 컨텍스트 확인)
+2. /vela context (immediately inspect what Vela knows about it)
 ```
 
 ---
 
 ## Error Handling
 
-| 상황 | 메시지 | 대응 |
+| Situation | Signal | Response |
 |------|--------|------|
-| Paperclip 서버 미실행 | `curl: (7) Failed to connect` | "Paperclip 서버가 실행되지 않습니다. 확인: `launchctl list \| grep paperclip`" |
-| gbrain 미설치 | `gbrain: command not found` | "gbrain이 필요합니다. 설치: `bun add -g github:JakeB-5/gbrain`" |
-| Ollama 미실행 | gbrain 검색이 keyword-only fallback | 정상 동작. 벡터 검색 필요 시: `ollama serve && ollama pull bge-m3` |
-| 프로젝트 미등록 | `~/.vela/projects.json`에 없음 | `/vela register` 실행 안내 |
-| API 응답 에러 | HTTP 4xx/5xx | 응답 body의 error 메시지를 그대로 출력 |
+| Paperclip server not running | `curl: (7) Failed to connect` | "Paperclip server is not running. Check: `launchctl list \| grep paperclip`" |
+| gbrain not installed | `gbrain: command not found` | "gbrain is required. Install: `bun add -g github:JakeB-5/gbrain`" |
+| Ollama not running | gbrain search falls back to keyword-only | Normal degraded mode. For vector search: `ollama serve && ollama pull bge-m3` |
+| Project not registered | Absent from `~/.vela/projects.json` | Suggest running `/vela register` |
+| API error response | HTTP 4xx/5xx | Echo the error message from the response body verbatim |
 
-**해결되지 않는 문제는 https://github.com/JakeB-5/vela-union/issues 에 이슈를 등록해주세요.**
+**If the problem persists, file an issue at https://github.com/JakeB-5/vela-union/issues.**
 
 ---
 
@@ -325,14 +325,14 @@ Agent:
 │              Vela Union (5 Systems)               │
 ├──────────┬──────────┬──────────┬────────┬────────┤
 │Paperclip │ gstack   │Graphify  │PageIdx │ gbrain │
-│거버넌스   │ 실행     │ 코드구조  │ 문서   │ 기억   │
-│누가/언제  │ 어떻게   │ 어떻게    │ 무엇   │ 무엇을 │
-│          │          │ 연결     │ 안에   │ 알고   │
+│governance│ execution│ code     │ docs   │ memory │
+│who/when  │ how      │ how      │ what's │ what we│
+│          │          │ connected│ inside │ know   │
 └──────────┴──────────┴──────────┴────────┴────────┘
 ```
 
-- **Paperclip**: 에이전트 조직 관리, 이슈 트래킹, heartbeat 스케줄링
-- **gstack**: Claude Code 스킬 실행 (qa, review, ship, investigate)
-- **Graphify**: 코드+문서의 AST 기반 지식 그래프
-- **PageIndex**: LLM 추론 기반 문서 내부 검색
-- **gbrain**: 하이브리드 의미 검색 기반 장기 기억 (Ollama bge-m3, 로컬, $0)
+- **Paperclip**: agent org chart, issue tracking, heartbeat scheduling
+- **gstack**: Claude Code skill execution (qa, review, ship, investigate)
+- **Graphify**: AST-based knowledge graph over code + docs
+- **PageIndex**: LLM-reasoning in-document search
+- **gbrain**: long-term memory via hybrid semantic search (Ollama bge-m3, local, $0)
