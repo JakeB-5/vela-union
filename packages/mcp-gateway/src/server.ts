@@ -24,6 +24,7 @@ import {
   getNode,
   getStats,
   graphExists,
+  reconcileGraphViz,
 } from "./graphify.js";
 import {
   enqueue as enqueueBuild,
@@ -483,6 +484,29 @@ function registerGraphTools(server: McpServer): void {
       try {
         const stats = refreshGraph(projectName, projectPath);
         return jsonResult({ success: true, stats });
+      } catch (err) {
+        return jsonResult(
+          { success: false, error: (err as Error).message },
+          true,
+        );
+      }
+    },
+  );
+
+  server.registerTool(
+    "graph_viz_sync",
+    {
+      title: "Sync graph visualizations to the plugin UI",
+      description:
+        "Reconcile graph.html files from ~/.vela/graphify/ into the plugin " +
+        "dist/ui/graphs/ directory and rewrite manifest.json. Use after " +
+        "manual builds or to fix missing projects in the graph-viz page.",
+      inputSchema: {},
+    },
+    () => {
+      try {
+        const result = reconcileGraphViz();
+        return jsonResult({ success: true, ...result });
       } catch (err) {
         return jsonResult(
           { success: false, error: (err as Error).message },

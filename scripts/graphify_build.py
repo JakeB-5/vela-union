@@ -64,19 +64,34 @@ def build(project_path: Path, output_dir: Path, plugin_graphs_dir: Path | None =
 
     # Generate HTML visualization if graph is within the supported size limit.
     html_generated = False
+    html_state = "html_failed"
     if G.number_of_nodes() <= MAX_NODES_FOR_VIZ:
         try:
             to_html(G, communities, str(html_path))
             print(f"[graphify] HTML visualization written to {html_path}", flush=True)
             html_generated = True
+            html_state = "html_generated"
         except Exception as exc:
             print(f"[graphify] Warning: HTML generation skipped: {exc}", flush=True)
+            html_state = "html_failed"
     else:
         print(
             f"[graphify] Warning: graph too large for HTML viz "
             f"({G.number_of_nodes()} > {MAX_NODES_FOR_VIZ}), skipping.",
             flush=True,
         )
+        html_state = "html_skipped_too_large"
+
+    # Persist html_state into status.json so the UI can surface it.
+    status_path = output_dir / "status.json"
+    status_data: dict = {}
+    if status_path.exists():
+        try:
+            status_data = json.loads(status_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    status_data["html_state"] = html_state
+    status_path.write_text(json.dumps(status_data, indent=2), encoding="utf-8")
 
     # Copy HTML to plugin graphs dir and update manifest.json if requested.
     if html_generated and plugin_graphs_dir is not None:

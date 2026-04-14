@@ -19,6 +19,7 @@
 // always spawned detached so it cannot block the caller.
 
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   appendFileSync,
@@ -654,8 +655,26 @@ export function triggerGraphifyBootstrap(
 ): { spawned: boolean; pid: number | null; reason?: string } {
   const outputDir = join(homedir(), ".vela", "graphify", projectName);
   const graphJson = join(outputDir, "graph.json");
+  const graphHtml = join(outputDir, "graph.html");
 
   if (existsSync(graphJson)) {
+    // VELA-56: even when skipping the build, copy graph.html to plugin dir if
+    // it exists but hasn't been synced yet.
+    const repoRoot = "/Users/jin/projects/vela-union";
+    const pluginGraphsDir = join(repoRoot, "packages", "paperclip-plugin", "dist", "ui", "graphs");
+    if (existsSync(graphHtml)) {
+      try {
+        mkdirSync(pluginGraphsDir, { recursive: true });
+        copyFileSync(graphHtml, join(pluginGraphsDir, `${projectName}.html`));
+        const entries = readdirSync(pluginGraphsDir)
+          .filter((f: string) => f.endsWith(".html"))
+          .map((f: string) => f.replace(/\.html$/, ""))
+          .sort();
+        writeFileSync(join(pluginGraphsDir, "manifest.json"), JSON.stringify(entries), "utf-8");
+      } catch {
+        // best-effort copy
+      }
+    }
     return { spawned: false, pid: null, reason: "graph.json already exists, skipping bootstrap" };
   }
 
@@ -827,6 +846,20 @@ function getGraphifyStatus(projectName: string): SubsystemStatus {
     };
   }
 
+  // VELA-56: read html_state from status.json if available
+  let htmlState: string | null = null;
+  const statusJsonPath = join(outputDir, "status.json");
+  try {
+    if (existsSync(statusJsonPath)) {
+      const statusRaw = JSON.parse(readFileSync(statusJsonPath, "utf-8"));
+      if (typeof statusRaw.html_state === "string") {
+        htmlState = statusRaw.html_state;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   try {
     const raw = readFileSync(graphJson, "utf-8");
     const graph = JSON.parse(raw) as {
@@ -842,19 +875,19 @@ function getGraphifyStatus(projectName: string): SubsystemStatus {
         : 0;
     const mtime = statSync(graphJson).mtime.toISOString();
     return {
-      system: "graphify",
+      system: "graphify" as const,
       initialized: true,
-      label: "built",
-      stats: { nodeCount, edgeCount },
+      label: htmlState === "html_skipped_too_large" ? "built (viz skipped: too many nodes)" : "built",
+      stats: { nodeCount, edgeCount, htmlState },
       lastModified: mtime,
       dataPath,
     };
   } catch {
     return {
-      system: "graphify",
+      system: "graphify" as const,
       initialized: false,
       label: "error reading graph.json",
-      stats: { nodeCount: 0, edgeCount: 0 },
+      stats: { nodeCount: 0, edgeCount: 0, htmlState },
       lastModified: null,
       dataPath,
     };

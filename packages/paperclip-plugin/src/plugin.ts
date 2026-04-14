@@ -1019,6 +1019,10 @@ const plugin = definePlugin({
           result as unknown as Record<string, unknown>,
         );
 
+        // VELA-56: reconcile graph-viz HTML files on every startup
+        const reconciled = await scanner.reconcileGraphViz();
+        bgLog.info("graph-viz reconcile complete", reconciled as unknown as Record<string, unknown>);
+
         const queueSpecifier = "@vela-union/mcp-gateway/dist/build-queue.js";
         const queue = (await import(queueSpecifier)) as {
           startWorker: () => { stop: () => Promise<void> };

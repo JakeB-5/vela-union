@@ -10,7 +10,7 @@
 // - refreshGraph()  re-runs the build using graphify's SHA256 cache for incremental updates
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -308,4 +308,62 @@ export function getStats(projectName: string): GraphStats {
     builtAt: stat.mtime.toISOString(),
     exists: true,
   };
+}
+
+// ---------------------------------------------------------------------------
+// VELA-56: Graph-viz reconciliation
+// ---------------------------------------------------------------------------
+
+export interface ReconcileResult {
+  copied: string[];
+  removed: string[];
+  manifestEntries: string[];
+}
+
+/**
+ * Walk every project in ~/.vela/graphify/, copy any graph.html into the plugin
+ * dist/ui/graphs/ directory, remove stale HTML, and rewrite manifest.json.
+ */
+export function reconcileGraphViz(): ReconcileResult {
+  const result: ReconcileResult = { copied: [], removed: [], manifestEntries: [] };
+
+  mkdirSync(PLUGIN_GRAPHS_DIR, { recursive: true });
+  if (!existsSync(GRAPHIFY_ROOT)) return result;
+
+  const sourceProjects = new Set<string>();
+
+  for (const name of readdirSync(GRAPHIFY_ROOT)) {
+    const htmlPath = join(GRAPHIFY_ROOT, name, "graph.html");
+    if (existsSync(htmlPath)) {
+      sourceProjects.add(name);
+      try {
+        copyFileSync(htmlPath, join(PLUGIN_GRAPHS_DIR, `${name}.html`));
+        result.copied.push(name);
+      } catch {
+        // best-effort
+      }
+    }
+  }
+
+  for (const file of readdirSync(PLUGIN_GRAPHS_DIR)) {
+    if (!file.endsWith(".html")) continue;
+    const stem = file.replace(/\.html$/, "");
+    if (!sourceProjects.has(stem)) {
+      try {
+        unlinkSync(join(PLUGIN_GRAPHS_DIR, file));
+        result.removed.push(stem);
+      } catch {
+        // best-effort
+      }
+    }
+  }
+
+  const entries = readdirSync(PLUGIN_GRAPHS_DIR)
+    .filter((f) => f.endsWith(".html"))
+    .map((f) => f.replace(/\.html$/, ""))
+    .sort();
+  writeFileSync(join(PLUGIN_GRAPHS_DIR, "manifest.json"), JSON.stringify(entries), "utf-8");
+  result.manifestEntries = entries;
+
+  return result;
 }

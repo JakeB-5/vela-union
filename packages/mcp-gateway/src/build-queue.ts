@@ -120,6 +120,7 @@ const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, "..", "..", "..");
 const VENV_PYTHON = join(REPO_ROOT, ".venv", "bin", "python");
 const BUILD_SCRIPT = join(REPO_ROOT, "scripts", "graphify_build.py");
+const PLUGIN_GRAPHS_DIR = join(REPO_ROOT, "packages", "paperclip-plugin", "dist", "ui", "graphs");
 
 // ---------------------------------------------------------------------------
 // Filesystem helpers
@@ -884,7 +885,7 @@ function runGraphifyBuild(
     ensureProjectDir(entry.projectName);
     const outputDir = join(GRAPHIFY_DIR, entry.projectName);
 
-    const child = spawn(VENV_PYTHON, [BUILD_SCRIPT, entry.projectPath, outputDir], {
+    const child = spawn(VENV_PYTHON, [BUILD_SCRIPT, entry.projectPath, outputDir, PLUGIN_GRAPHS_DIR], {
       stdio: ["ignore", "pipe", "pipe"],
     });
     onChild(child);

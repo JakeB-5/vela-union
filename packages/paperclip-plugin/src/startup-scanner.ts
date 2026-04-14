@@ -168,3 +168,34 @@ export async function scanAndQueue(): Promise<ScanResult> {
   scannerLogger.info("scan complete", { ...result });
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// Graph-viz reconciliation (VELA-56)
+// ---------------------------------------------------------------------------
+
+export interface ReconcileResult {
+  copied: string[];
+  removed: string[];
+  manifestEntries: string[];
+}
+
+const GRAPHIFY_MODULE = "@vela-union/mcp-gateway/dist/graphify.js";
+
+/**
+ * Delegate to mcp-gateway's reconcileGraphViz() which walks ~/.vela/graphify/,
+ * copies graph.html files into the plugin dist, and rewrites manifest.json.
+ */
+export async function reconcileGraphViz(): Promise<ReconcileResult> {
+  try {
+    const specifier = GRAPHIFY_MODULE;
+    const mod = (await import(specifier)) as {
+      reconcileGraphViz: () => ReconcileResult;
+    };
+    const result = mod.reconcileGraphViz();
+    scannerLogger.info("reconcile complete", result as unknown as Record<string, unknown>);
+    return result;
+  } catch (err) {
+    scannerLogger.error("reconcile failed", err);
+    return { copied: [], removed: [], manifestEntries: [] };
+  }
+}

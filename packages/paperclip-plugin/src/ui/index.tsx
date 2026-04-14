@@ -172,6 +172,13 @@ const STAT_LABELS: Record<string, string> = {
   chunkCount: "Chunks",
   embeddedCount: "Embedded",
   documentCount: "Documents",
+  htmlState: "HTML Viz",
+};
+
+const HTML_STATE_DISPLAY: Record<string, { label: string; color: string }> = {
+  html_generated: { label: "Available", color: "#4ade80" },
+  html_skipped_too_large: { label: "Skipped (too many nodes)", color: "#fbbf24" },
+  html_failed: { label: "Failed", color: "#f87171" },
 };
 
 function SubsystemCard({ status, running, onAction }: { status: SubsystemStatus; running: boolean; onAction: () => void }) {
@@ -202,9 +209,23 @@ function SubsystemCard({ status, running, onAction }: { status: SubsystemStatus;
           <StatusBadge initialized={status.initialized} label={status.label} />
         </div>
       </div>
-      {Object.entries(status.stats).map(([key, val]) => (
-        <StatRow key={key} label={STAT_LABELS[key] ?? key} value={val} />
-      ))}
+      {Object.entries(status.stats).map(([key, val]) => {
+        if (key === "htmlState" && typeof val === "string" && HTML_STATE_DISPLAY[val]) {
+          const display = HTML_STATE_DISPLAY[val];
+          return (
+            <div key={key} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+              <span style={{ color: "var(--color-text-secondary, #9ca3af)", fontSize: 13 }}>
+                {STAT_LABELS[key]}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: display.color }}>
+                {display.label}
+              </span>
+            </div>
+          );
+        }
+        if (key === "htmlState") return null;
+        return <StatRow key={key} label={STAT_LABELS[key] ?? key} value={val} />;
+      })}
       <StatRow label="Last modified" value={formatDate(status.lastModified)} />
       <div style={{ marginTop: 4, fontSize: 11, color: "var(--color-text-tertiary, #6b7280)", wordBreak: "break-all" }}>
         {status.dataPath}
