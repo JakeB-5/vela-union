@@ -27,6 +27,7 @@ import {
   readFileSync,
   readdirSync,
   statSync,
+  unlinkSync,
 } from "node:fs";
 import { dirname, extname, join } from "node:path";
 import { homedir } from "node:os";
@@ -652,12 +653,18 @@ export function triggerPageIndexSync(
 export function triggerGraphifyBootstrap(
   projectName: string,
   projectPath: string,
+  options?: { force?: boolean },
 ): { spawned: boolean; pid: number | null; reason?: string } {
   const outputDir = join(homedir(), ".vela", "graphify", projectName);
   const graphJson = join(outputDir, "graph.json");
   const graphHtml = join(outputDir, "graph.html");
 
-  if (existsSync(graphJson)) {
+  if (options?.force) {
+    try { if (existsSync(graphJson)) unlinkSync(graphJson); } catch { /* ignore */ }
+    try { if (existsSync(graphHtml)) unlinkSync(graphHtml); } catch { /* ignore */ }
+    const statusJson = join(outputDir, "status.json");
+    try { if (existsSync(statusJson)) unlinkSync(statusJson); } catch { /* ignore */ }
+  } else if (existsSync(graphJson)) {
     // VELA-56: even when skipping the build, copy graph.html to plugin dir if
     // it exists but hasn't been synced yet.
     const repoRoot = "/Users/jin/projects/vela-union";
@@ -877,7 +884,7 @@ function getGraphifyStatus(projectName: string): SubsystemStatus {
     return {
       system: "graphify" as const,
       initialized: true,
-      label: htmlState === "html_skipped_too_large" ? "built (viz skipped: too many nodes)" : "built",
+      label: "built",
       stats: { nodeCount, edgeCount, htmlState },
       lastModified: mtime,
       dataPath,

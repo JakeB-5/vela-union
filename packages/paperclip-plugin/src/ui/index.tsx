@@ -177,7 +177,6 @@ const STAT_LABELS: Record<string, string> = {
 
 const HTML_STATE_DISPLAY: Record<string, { label: string; color: string }> = {
   html_generated: { label: "Available", color: "#4ade80" },
-  html_skipped_too_large: { label: "Skipped (too many nodes)", color: "#fbbf24" },
   html_failed: { label: "Failed", color: "#f87171" },
 };
 

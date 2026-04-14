@@ -4,9 +4,9 @@
 Usage:
   python graphify_build.py <project_path> <output_dir> [plugin_graphs_dir]
 
-Outputs graph.json (and graph.html if node count is within the viz limit) to
-<output_dir>/. AST-only mode — no LLM key needed. Uses graphify.extract +
-build_from_json + cluster + to_json + to_html from the graphifyy Python package.
+Outputs graph.json and graph.html (Cosmos WebGL renderer) to <output_dir>/.
+AST-only mode — no LLM key needed. Uses graphify.extract + build_from_json +
+cluster + to_json from the graphify Python package.
 
 If plugin_graphs_dir is provided, the generated graph.html is copied there as
 <project_name>.html and manifest.json is regenerated from all *.html files.
@@ -19,8 +19,7 @@ import sys
 import time
 from pathlib import Path
 
-# Maximum nodes graphify's to_html supports (mirrors graphify.export constant).
-MAX_NODES_FOR_VIZ = 5_000
+TEMPLATE_PATH = Path(__file__).parent / "graphify_html_template.html"
 
 
 def _update_manifest(graphs_dir: Path) -> None:
@@ -30,11 +29,23 @@ def _update_manifest(graphs_dir: Path) -> None:
     print(f"[graphify] manifest.json updated: {names}", flush=True)
 
 
+def _generate_cosmos_html(graph_json_path: Path, html_path: Path, title: str, node_count: int, edge_count: int, community_count: int) -> None:
+    """Generate a self-contained Cosmos WebGL HTML visualization from graph.json."""
+    template = TEMPLATE_PATH.read_text(encoding="utf-8")
+    graph_data = graph_json_path.read_text(encoding="utf-8")
+    stats_str = f"{node_count} nodes &middot; {edge_count} edges &middot; {community_count} communities"
+
+    html = template.replace("{{GRAPH_DATA}}", graph_data)
+    html = html.replace("{{TITLE}}", title)
+    html = html.replace("{{STATS}}", stats_str)
+    html_path.write_text(html, encoding="utf-8")
+
+
 def build(project_path: Path, output_dir: Path, plugin_graphs_dir: Path | None = None) -> dict:
     from graphify.extract import extract, collect_files
     from graphify.build import build_from_json
     from graphify.cluster import cluster
-    from graphify.export import to_json, to_html
+    from graphify.export import to_json
 
     output_dir.mkdir(parents=True, exist_ok=True)
     graph_path = output_dir / "graph.json"
@@ -62,25 +73,21 @@ def build(project_path: Path, output_dir: Path, plugin_graphs_dir: Path | None =
 
     to_json(G, communities, str(graph_path))
 
-    # Generate HTML visualization if graph is within the supported size limit.
+    # Generate Cosmos WebGL HTML visualization (no node-count limit).
     html_generated = False
     html_state = "html_failed"
-    if G.number_of_nodes() <= MAX_NODES_FOR_VIZ:
-        try:
-            to_html(G, communities, str(html_path))
-            print(f"[graphify] HTML visualization written to {html_path}", flush=True)
-            html_generated = True
-            html_state = "html_generated"
-        except Exception as exc:
-            print(f"[graphify] Warning: HTML generation skipped: {exc}", flush=True)
-            html_state = "html_failed"
-    else:
-        print(
-            f"[graphify] Warning: graph too large for HTML viz "
-            f"({G.number_of_nodes()} > {MAX_NODES_FOR_VIZ}), skipping.",
-            flush=True,
+    try:
+        project_name = output_dir.name
+        _generate_cosmos_html(
+            graph_path, html_path, project_name,
+            G.number_of_nodes(), G.number_of_edges(), len(communities),
         )
-        html_state = "html_skipped_too_large"
+        print(f"[graphify] Cosmos HTML visualization written to {html_path}", flush=True)
+        html_generated = True
+        html_state = "html_generated"
+    except Exception as exc:
+        print(f"[graphify] Warning: HTML generation failed: {exc}", flush=True)
+        html_state = "html_failed"
 
     # Persist html_state into status.json so the UI can surface it.
     status_path = output_dir / "status.json"

@@ -474,7 +474,7 @@ const plugin = definePlugin({
     ctx.actions.register("rebuild-graphify", async (params) => {
       const project = await resolveProjectFromParams(params);
       if (!project) return { error: "Could not resolve project" };
-      const result = triggerGraphifyBootstrap(project.name, project.path);
+      const result = triggerGraphifyBootstrap(project.name, project.path, { force: true });
       ctx.logger.info("rebuild-graphify action", { project: project.name, ...result });
       return { success: result.spawned, ...result };
     });

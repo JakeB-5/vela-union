@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>graphify — {{TITLE}}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  #graph-container { flex: 1; position: relative; }
+  #sidebar { width: 280px; background: #1a1a2e; border-left: 1px solid #2a2a4e; display: flex; flex-direction: column; overflow: hidden; }
+  #search-wrap { padding: 12px; border-bottom: 1px solid #2a2a4e; }
+  #search { width: 100%; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
+  #search:focus { border-color: #4E79A7; }
+  #search-results { margin-top: 8px; max-height: 200px; overflow-y: auto; }
+  .search-hit { padding: 4px 8px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search-hit:hover { background: #2a2a4e; }
+  #info-panel { flex: 1; padding: 12px; overflow-y: auto; border-bottom: 1px solid #2a2a4e; }
+  #info-panel h3 { font-size: 13px; margin-bottom: 8px; color: #8888aa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+  .info-label { color: #9ca3af; }
+  .info-value { color: #e0e0e0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+  #legend-wrap { padding: 12px; max-height: 200px; overflow-y: auto; border-bottom: 1px solid #2a2a4e; }
+  #legend-wrap h3 { font-size: 13px; margin-bottom: 8px; color: #8888aa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  #stats { padding: 12px; border-top: 1px solid #2a2a4e; font-size: 11px; color: #6b7280; }
+  .empty { color: #6b7280; font-style: italic; font-size: 12px; }
+  #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; color: #8888aa; }
+</style>
+</head>
+<body>
+<div id="graph-container"><div id="loading">Initializing WebGL graph&hellip;</div></div>
+<div id="sidebar">
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search nodes..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="info-panel">
+    <h3>Node Info</h3>
+    <div id="info-content"><span class="empty">Click a node to inspect it</span></div>
+  </div>
+  <div id="legend-wrap">
+    <h3>Communities</h3>
+    <div id="legend"></div>
+  </div>
+  <div id="stats">{{STATS}}</div>
+</div>
+
+<script type="module">
+import { Graph } from "https://esm.sh/@cosmos.gl/graph@2.6.4";
+
+const GRAPH_DATA = {{GRAPH_DATA}};
+
+const COMMUNITY_COLORS_RGBA = [
+  [0.306, 0.475, 0.655, 1],
+  [0.949, 0.557, 0.169, 1],
+  [0.882, 0.341, 0.349, 1],
+  [0.463, 0.718, 0.698, 1],
+  [0.349, 0.631, 0.310, 1],
+  [0.929, 0.788, 0.282, 1],
+  [0.690, 0.478, 0.631, 1],
+  [1.000, 0.616, 0.655, 1],
+  [0.612, 0.459, 0.373, 1],
+  [0.729, 0.690, 0.675, 1],
+];
+const COMMUNITY_HEX = [
+  "#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
+  "#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC",
+];
+
+const nodes = GRAPH_DATA.nodes || [];
+const links = GRAPH_DATA.links || GRAPH_DATA.edges || [];
+
+const idToIndex = new Map();
+nodes.forEach((n, i) => idToIndex.set(n.id, i));
+
+const degree = new Array(nodes.length).fill(0);
+links.forEach(l => {
+  const si = idToIndex.get(l.source);
+  const ti = idToIndex.get(l.target);
+  if (si !== undefined) degree[si]++;
+  if (ti !== undefined) degree[ti]++;
+});
+const maxDeg = Math.max(...degree, 1);
+
+const spaceSize = 4096;
+const positions = new Float32Array(nodes.length * 2);
+for (let i = 0; i < nodes.length; i++) {
+  positions[i * 2]     = (Math.random() - 0.5) * spaceSize;
+  positions[i * 2 + 1] = (Math.random() - 0.5) * spaceSize;
+}
+
+const linkPairs = [];
+links.forEach(l => {
+  const si = idToIndex.get(l.source);
+  const ti = idToIndex.get(l.target);
+  if (si !== undefined && ti !== undefined) linkPairs.push(si, ti);
+});
+const linkArray = new Float32Array(linkPairs);
+
+const colors = new Float32Array(nodes.length * 4);
+nodes.forEach((n, i) => {
+  const cid = n.community ?? 0;
+  const c = COMMUNITY_COLORS_RGBA[cid % COMMUNITY_COLORS_RGBA.length];
+  colors[i * 4]     = c[0];
+  colors[i * 4 + 1] = c[1];
+  colors[i * 4 + 2] = c[2];
+  colors[i * 4 + 3] = c[3];
+});
+
+const sizes = new Float32Array(nodes.length);
+nodes.forEach((_, i) => {
+  sizes[i] = 2 + 8 * (degree[i] / maxDeg);
+});
+
+// Community legend
+const communityMap = new Map();
+nodes.forEach(n => {
+  const cid = n.community ?? 0;
+  communityMap.set(cid, (communityMap.get(cid) ?? 0) + 1);
+});
+const legendEl = document.getElementById("legend");
+[...communityMap.entries()].sort((a, b) => a[0] - b[0]).forEach(([cid, count]) => {
+  const hex = COMMUNITY_HEX[cid % COMMUNITY_HEX.length];
+  const div = document.createElement("div");
+  div.className = "legend-item";
+  div.innerHTML = '<span class="legend-dot" style="background:' + hex + '"></span>Community ' + cid + ' (' + count + ')';
+  legendEl.appendChild(div);
+});
+
+function infoRow(label, value) {
+  const escaped = String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+  return '<div class="info-row"><span class="info-label">' + label + '</span><span class="info-value" title="' + escaped + '">' + escaped + '</span></div>';
+}
+
+// Create Cosmos graph
+const container = document.getElementById("graph-container");
+try {
+  const graph = new Graph(container, {
+    backgroundColor: "#0f0f1a",
+    spaceSize: spaceSize,
+    simulationRepulsion: 0.5,
+    simulationGravity: 0.25,
+    simulationFriction: 0.85,
+    fitViewOnInit: true,
+    fitViewDelay: 1500,
+    fitViewPadding: 0.1,
+    onClick: function(index) {
+      if (index === undefined || index === null) return;
+      const node = nodes[index];
+      if (!node) return;
+      const deg = degree[index];
+      const cid = node.community ?? 0;
+      const hex = COMMUNITY_HEX[cid % COMMUNITY_HEX.length];
+      document.getElementById("info-content").innerHTML = [
+        infoRow("Label", node.label || node.id),
+        infoRow("ID", node.id),
+        '<div class="info-row"><span class="info-label">Community</span><span class="info-value" style="color:' + hex + '">\u25cf ' + cid + '</span></div>',
+        infoRow("Degree", deg),
+        infoRow("File type", node.file_type || "\u2014"),
+        infoRow("Source", node.source_file || "\u2014"),
+        infoRow("Location", node.source_location || "\u2014"),
+      ].join("");
+    },
+  });
+
+  await graph.ready;
+  graph.setPointPositions(positions);
+  graph.setPointColors(colors);
+  graph.setPointSizes(sizes);
+  graph.setLinks(linkArray);
+  graph.render();
+
+  document.getElementById("loading").remove();
+
+  // Search
+  const searchInput = document.getElementById("search");
+  const searchResultsEl = document.getElementById("search-results");
+  searchInput.addEventListener("input", function() {
+    const q = searchInput.value.toLowerCase().trim();
+    searchResultsEl.innerHTML = "";
+    if (!q) return;
+    const matches = [];
+    for (let i = 0; i < nodes.length && matches.length < 20; i++) {
+      if ((nodes[i].label || nodes[i].id).toLowerCase().includes(q)) {
+        matches.push(i);
+      }
+    }
+    matches.forEach(function(i) {
+      const div = document.createElement("div");
+      div.className = "search-hit";
+      div.textContent = nodes[i].label || nodes[i].id;
+      div.addEventListener("click", function() {
+        graph.setZoomTransformByPointPositions([i]);
+      });
+      searchResultsEl.appendChild(div);
+    });
+  });
+} catch (err) {
+  document.getElementById("loading").textContent = "WebGL error: " + err.message;
+  console.error("Cosmos graph init failed:", err);
+}
+</script>
+</body>
+</html>
