@@ -490,7 +490,7 @@ const plugin = definePlugin({
     ctx.actions.register("reindex-pageindex", async (params) => {
       const project = await resolveProjectFromParams(params);
       if (!project) return { error: "Could not resolve project" };
-      const result = triggerPageIndexSync(project.name, project.path);
+      const result = triggerPageIndexSync(project.name, project.path, { force: true });
       ctx.logger.info("reindex-pageindex action", { project: project.name, ...result });
       return { success: result.spawned || result.queued > 0, ...result };
     });

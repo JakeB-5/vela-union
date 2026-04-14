@@ -564,7 +564,7 @@ function scanDocFiles(projectPath: string): string[] {
 export function triggerPageIndexSync(
   projectName: string,
   projectPath: string,
-  options?: { gatewayPath?: string },
+  options?: { gatewayPath?: string; force?: boolean },
 ): { spawned: boolean; queued: number; reason?: string } {
   const gatewayPath =
     options?.gatewayPath ??
@@ -576,6 +576,13 @@ export function triggerPageIndexSync(
       queued: 0,
       reason: `gateway not found at ${gatewayPath}`,
     };
+  }
+
+  if (options?.force) {
+    const statusPath = pageIndexStatusPath(projectName);
+    const indexPath = join(PAGEINDEX_ROOT, projectName, "index.json");
+    try { if (existsSync(statusPath)) writeFileSync(statusPath, "{}", "utf-8"); } catch { /* ignore */ }
+    try { if (existsSync(indexPath)) writeFileSync(indexPath, "{}", "utf-8"); } catch { /* ignore */ }
   }
 
   const allFiles = scanDocFiles(projectPath);
