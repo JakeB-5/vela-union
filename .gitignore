@@ -1,0 +1,35 @@
+# Upstream reference mirrors (Paperclip, gstack, Graphify, PageIndex) —
+# cloned locally for docs but not part of the vela-union source tree.
+refs/
+
+# Dependencies + build output
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Runtime / user config
+.env
+
+# Agent / tooling local state — persistent across sessions but local-only.
+# These are not meant to be shared via VCS.
+.omc/
+.venv/
+.claude/*
+!.claude/skills/
+.reflexion-fusion/
+
+# One-off build output / scratch
+graphify-out/
+
+# OS / editor noise
+.DS_Store
+**/__pycache__/
+*.pyc
+
+# Stale transpile output in scripts/ — test scripts are run via `npx tsx`,
+# never compiled to .js. Any .js/.d.ts here is a leftover from a past build.
+scripts/*.js
+scripts/*.d.ts
+scripts/*.js.map
+scripts/*.d.ts.map
+gbrain/

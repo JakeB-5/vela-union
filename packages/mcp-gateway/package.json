@@ -1,0 +1,27 @@
+{
+  "name": "@vela-union/mcp-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "vela-mcp-gateway": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.4.4",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@vela-union/gstack-adapter": "workspace:*",
+    "@vela-union/paperclip-plugin": "workspace:*",
+    "@vela-union/shared": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}

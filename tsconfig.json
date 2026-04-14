@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "references": [
+    { "path": "packages/shared" },
+    { "path": "packages/paperclip-plugin" },
+    { "path": "packages/gstack-adapter" },
+    { "path": "packages/mcp-gateway" },
+    { "path": "packages/vela-cli" }
+  ],
+  "exclude": ["node_modules", "dist", "refs", ".venv", "scripts", "packages/paperclip-plugin/src/ui", "gbrain"]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@vela-union/paperclip-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json && bash ../../scripts/copy-graph-viz.sh",
+    "build:ui": "tsc -p tsconfig.ui.json && bash ../../scripts/copy-graph-viz.sh",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "dependencies": {
+    "@vela-union/shared": "workspace:*",
+    "@vela-union/gstack-adapter": "workspace:*",
+    "@vela-union/mcp-gateway": "workspace:*",
+    "@paperclipai/plugin-sdk": "file:/Users/jin/projects/paperclip/packages/plugins/sdk"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}

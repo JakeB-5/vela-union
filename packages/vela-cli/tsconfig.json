@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "composite": true
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../paperclip-plugin" },
+    { "path": "../gstack-adapter" },
+    { "path": "../mcp-gateway" }
+  ]
+}

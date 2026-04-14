@@ -1,0 +1,22 @@
+{
+  "name": "@vela-union/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "bin": {
+    "vela": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@vela-union/shared": "workspace:*",
+    "@vela-union/paperclip-plugin": "workspace:*",
+    "@vela-union/gstack-adapter": "workspace:*",
+    "@vela-union/mcp-gateway": "workspace:*"
+  }
+}
