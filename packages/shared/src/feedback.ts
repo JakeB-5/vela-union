@@ -37,6 +37,32 @@ import type { ProjectConfig } from "./index.js";
 
 const DECISIONS_ROOT = join(homedir(), ".vela", "decisions");
 
+const PGLITE_BOOTSTRAP_FILES = new Set([
+  "PG_VERSION",
+  "pg_hba.conf",
+  "pg_ident.conf",
+  "postgresql.conf",
+  "postgresql.auto.conf",
+  "postmaster.pid",
+]);
+
+function getPgliteNewestMtime(dirPath: string): string | null {
+  try {
+    const entries = readdirSync(dirPath);
+    let newest: Date | null = null;
+    for (const entry of entries) {
+      if (PGLITE_BOOTSTRAP_FILES.has(entry)) continue;
+      try {
+        const st = statSync(join(dirPath, entry));
+        if (!newest || st.mtime > newest) newest = st.mtime;
+      } catch { /* skip unreadable entries */ }
+    }
+    return newest ? newest.toISOString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A single decision parsed from execution output. */
 export interface DecisionEntry {
   text: string;
@@ -994,11 +1020,7 @@ function getGbrainStatus(_projectName: string): SubsystemStatus {
         chunkCount: parse("Chunks"),
         embeddedCount: parse("Embedded"),
       };
-      const pgVersionPath = join(brainPath, "PG_VERSION");
-      let lastModified: string | null = null;
-      try {
-        lastModified = statSync(pgVersionPath).mtime.toISOString();
-      } catch { /* ignore */ }
+      const lastModified = getPgliteNewestMtime(brainPath);
 
       return {
         system: "gbrain",
@@ -1019,12 +1041,9 @@ function getGbrainStatus(_projectName: string): SubsystemStatus {
 
   // Fallback: check PGLite directory size as proxy for "has data"
   try {
-    const pgVersionPath = join(brainPath, "PG_VERSION");
     const basePath = join(brainPath, "base");
     const hasData = existsSync(basePath);
-    const lastModified = existsSync(pgVersionPath)
-      ? statSync(pgVersionPath).mtime.toISOString()
-      : null;
+    const lastModified = getPgliteNewestMtime(brainPath);
 
     return {
       system: "gbrain",
